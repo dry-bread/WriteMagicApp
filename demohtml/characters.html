@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>单字练习 - 汉字书写学习</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Microsoft YaHei', sans-serif;
+        }
+        
+        body {
+            background-color: #f8f8f8;
+            color: #333;
+            font-size: 16px;
+            line-height: 1.5;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        
+        header {
+            background-color: #f39c12;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .back-button {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        
+        .app-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin: 0;
+        }
+        
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            max-width: 500px;
+            width: 100%;
+            margin: 0 auto;
+        }
+        
+        .character-selector {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .character-display {
+            display: flex;
+            align-items: center;
+        }
+        
+        .current-character {
+            font-size: 2.5rem;
+            color: #f39c12;
+            margin-right: 15px;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #fff9e6;
+            border-radius: 10px;
+        }
+        
+        .character-info {
+            flex: 1;
+        }
+        
+        .character-name {
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-bottom: 3px;
+        }
+        
+        .stroke-count {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .character-nav {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .nav-button {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #666;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+        }
+        
+        .nav-button:hover {
+            background-color: #f1f1f1;
+            color: #f39c12;
+        }
+        
+        .practice-area {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .practice-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        
+        .practice-title {
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+        
+        .progress-info {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .current-stroke {
+            font-weight: bold;
+            color: #f39c12;
+        }
+        
+        .canvas-container {
+            position: relative;
+            border: 2px dashed #ddd;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+        
+        #drawing-canvas {
+            width: 100%;
+            height: 450px;
+            background-color: #f9f9f9;
+            background-image: 
+                linear-gradient(#e5e5e5 1px, transparent 1px),
+                linear-gradient(90deg, #e5e5e5 1px, transparent 1px);
+            background-size: 20px 20px;
+            touch-action: none;
+        }
+        
+        .guide-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        .character-outline {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0.1;
+            font-size: 12rem;
+            color: #333;
+        }
+        
+        .control-buttons {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        
+        .control-button {
+            padding: 12px 24px;
+            border-radius: 5px;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-size: 1.1rem;
+            flex: 1;
+        }
+        
+        .hint-button {
+            background-color: #3498db;
+            color: white;
+        }
+        
+        .hint-button:hover {
+            background-color: #2980b9;
+        }
+        
+        .next-stroke-button {
+            background-color: #f39c12;
+            color: white;
+        }
+        
+        .next-stroke-button:hover {
+            background-color: #e67e22;
+        }
+        
+        .feedback-panel {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .feedback-title {
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        
+        .feedback-content {
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        
+        .assistant-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background-color: #f39c12;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            border: none;
+            cursor: pointer;
+        }
+        
+        .assistant-button:hover, .assistant-button:focus {
+            background-color: #e67e22;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 15px;
+            background-color: #f1f1f1;
+            color: #777;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部标题栏 -->
+    <header>
+        <a href="index.html" class="back-button">←</a>
+        <h1 class="app-title">单字练习</h1>
+        <button id="voice-assist" style="position: absolute; right: 15px; top: 15px; background: none; border: none; color: white; font-size: 22px;">🔊</button>
+    </header>
+    
+    <!-- 主要内容区域 -->
+    <div class="main-content">
+        <!-- 简化的汉字选择器 -->
+        <div class="character-selector">
+            <div class="character-display">
+                <div class="current-character" id="current-character">李</div>
+                <div class="character-info">
+                    <div class="character-name" id="character-name">李 (lǐ)</div>
+                    <div class="stroke-count" id="stroke-count">7画 - 木部 + 子部</div>
+                </div>
+            </div>
+            <div class="character-nav">
+                <button class="nav-button" id="prev-character" aria-label="上一个汉字">◀</button>
+                <button class="nav-button" id="next-character" aria-label="下一个汉字">▶</button>
+            </div>
+        </div>
+        
+        <!-- 扩大的练习区域 -->
+        <div class="practice-area">
+            <div class="practice-header">
+                <h3 class="practice-title">逐笔练习</h3>
+                <div class="progress-info">
+                    当前：<span class="current-stroke">第1画 - 横</span> <span id="stroke-progress">(1/7)</span>
+                </div>
+            </div>
+            
+            <div class="canvas-container">
+                <canvas id="drawing-canvas"></canvas>
+                <div class="guide-layer">
+                    <div class="character-outline">李</div>
+                </div>
+            </div>
+            
+            <div class="control-buttons">
+                <button class="control-button hint-button">
+                    <span style="margin-right: 5px;">👆</span>触感提示
+                </button>
+                <button class="control-button next-stroke-button">
+                    下一笔 <span style="margin-left: 5px;">→</span>
+                </button>
+            </div>
+        </div>
+        
+        <div class="feedback-panel">
+            <h3 class="feedback-title">当前笔画提示</h3>
+            <div class="feedback-content">
+                <p>请画一<strong>横</strong>，从左向右。</p>
+                <p>这是"木"部的第一笔，位于字的左上方。</p>
+                <p>当您准备好时，请按照语音和振动引导完成书写。</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 更大的语音助手按钮 -->
+    <button class="assistant-button" aria-label="语音助手">🗣️</button>
+    
+    <footer>
+        视障人士汉字书写学习应用 © 2023
+    </footer>
+    
+    <script>
+        // 定义汉字数据
+        const characters = [
+            { name: "李 (lǐ)", char: "李", strokes: 7, info: "木部 + 子部" },
+            { name: "明 (míng)", char: "明", strokes: 8, info: "日部 + 月部" },
+            { name: "张 (zhāng)", char: "张", strokes: 7, info: "弓部 + 长部" },
+            { name: "王 (wáng)", char: "王", strokes: 4, info: "基本汉字" },
+            { name: "刘 (liú)", char: "刘", strokes: 6, info: "刀部 + 文部" }
+        ];
+        
+        let currentCharIndex = 0;
+        let currentStrokeIndex = 0;
+        const strokeTypes = ["横", "竖", "撇", "捺", "点", "折"];
+        
+        // 李的笔顺示例
+        const liStrokes = [
+            {type: "横", desc: "位于'木'部的顶部，从左向右画一条直线"},
+            {type: "竖", desc: "从上到下画一条直线，贯穿'木'部中心"},
+            {type: "横", desc: "在'木'部的中间位置，从左向右画一条直线"},
+            {type: "撇", desc: "从'木'部右侧向左下方画一条斜线"},
+            {type: "横", desc: "在'子'部的顶部，从左向右画一条直线"},
+            {type: "撇", desc: "'子'部左侧，从上向左下方画一条斜线"},
+            {type: "捺", desc: "'子'部右侧，从上向右下方画一条斜线"}
+        ];
+        
+        // 更新显示的汉字信息
+        function updateCharacterDisplay() {
+            const character = characters[currentCharIndex];
+            document.getElementById('current-character').textContent = character.char;
+            document.getElementById('character-name').textContent = character.name;
+            document.getElementById('stroke-count').textContent = `${character.strokes}画 - ${character.info}`;
+            document.querySelector('.character-outline').textContent = character.char;
+            
+            // 重置笔画进度
+            currentStrokeIndex = 0;
+            updateStrokeDisplay();
+            
+            // 在实际应用中，应该播放语音提示
+            console.log("当前选择的汉字:", character.name);
+        }
+        
+        // 更新笔画信息
+        function updateStrokeDisplay() {
+            // 获取当前汉字的笔画数据
+            let strokesData = liStrokes; // 这里仅使用李的笔顺，实际应该根据当前汉字选择对应数据
+            let totalStrokes = strokesData.length;
+            
+            const strokeInfo = strokesData[currentStrokeIndex];
+            document.querySelector('.current-stroke').textContent = `第${currentStrokeIndex+1}画 - ${strokeInfo.type}`;
+            document.getElementById('stroke-progress').textContent = `(${currentStrokeIndex+1}/${totalStrokes})`;
+            
+            // 更新提示内容
+            const feedbackContent = document.querySelector('.feedback-content');
+            feedbackContent.innerHTML = `<p>请画一<strong>${strokeInfo.type}</strong>。</p><p>${strokeInfo.desc}。</p><p>当您准备好时，请按照语音和振动引导完成书写。</p>`;
+            
+            // 在实际应用中，应该播放语音提示
+            console.log("当前笔画:", strokeInfo.type, strokeInfo.desc);
+        }
+        
+        // 下一个笔画
+        function nextStroke() {
+            const character = characters[currentCharIndex];
+            const totalStrokes = liStrokes.length; // 实际应根据当前汉字获取
+            
+            if (currentStrokeIndex < totalStrokes - 1) {
+                currentStrokeIndex++;
+                updateStrokeDisplay();
+            } else {
+                alert("恭喜！您已完成当前汉字的所有笔画练习。");
+                // 在实际应用中，应播放语音提示完成所有笔画
+            }
+        }
+        
+        // 初始化页面
+        document.addEventListener('DOMContentLoaded', function() {
+            updateCharacterDisplay();
+            
+            // 设置汉字导航按钮事件
+            document.getElementById('prev-character').addEventListener('click', function() {
+                currentCharIndex = (currentCharIndex - 1 + characters.length) % characters.length;
+                updateCharacterDisplay();
+            });
+            
+            document.getElementById('next-character').addEventListener('click', function() {
+                currentCharIndex = (currentCharIndex + 1) % characters.length;
+                updateCharacterDisplay();
+            });
+            
+            // 设置下一笔按钮事件
+            document.querySelector('.next-stroke-button').addEventListener('click', nextStroke);
+            
+            // 触感提示按钮事件
+            document.querySelector('.hint-button').addEventListener('click', function() {
+                // 在实际应用中，应该触发振动反馈
+                console.log("触发触感引导");
+                alert("触感引导已启动，请感受振动模式");
+                // 这里应该有触发设备振动的代码
+            });
+            
+            // 在实际应用中，应增加触摸反馈和语音引导，以及画布绘制功能
+        });
+    </script>
+</body>
+</html> 

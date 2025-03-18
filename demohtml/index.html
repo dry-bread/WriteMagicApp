@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视障人士汉字书写学习</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Microsoft YaHei', sans-serif;
+        }
+        
+        body {
+            background-color: #f8f8f8;
+            color: #333;
+            font-size: 16px;
+            line-height: 1.5;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        
+        header {
+            background-color: #3498db;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .app-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin: 0;
+        }
+        
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            max-width: 500px;
+            width: 100%;
+            margin: 0 auto;
+        }
+        
+        .welcome-message {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .menu-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .menu-item {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .menu-item:hover, .menu-item:focus {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        
+        .menu-icon {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            margin-right: 15px;
+            font-size: 24px;
+            color: white;
+        }
+        
+        .icon-profile { background-color: #9b59b6; }
+        .icon-stroke { background-color: #e74c3c; }
+        .icon-character { background-color: #f39c12; }
+        .icon-signature { background-color: #2ecc71; }
+        
+        .menu-text {
+            flex: 1;
+        }
+        
+        .menu-item h3 {
+            margin-bottom: 5px;
+            font-size: 1.2rem;
+        }
+        
+        .menu-item p {
+            font-size: 0.9rem;
+            color: #777;
+        }
+        
+        .arrow {
+            margin-left: 10px;
+            font-size: 20px;
+        }
+        
+        .assistant-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: #3498db;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            border: none;
+            cursor: pointer;
+            z-index: 1000;
+        }
+        
+        .assistant-button:hover, .assistant-button:focus {
+            background-color: #2980b9;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 15px;
+            background-color: #f1f1f1;
+            color: #777;
+            font-size: 0.8rem;
+        }
+        
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部标题栏 -->
+    <header>
+        <h1 class="app-title">汉字书写学习</h1>
+        <button id="voice-assist" style="position: absolute; right: 15px; top: 15px; background: none; border: none; color: white; font-size: 22px;">🔊</button>
+    </header>
+    
+    <!-- 主要内容区域 -->
+    <div class="main-content">
+        <div class="welcome-message">
+            <h2>欢迎使用汉字书写学习</h2>
+            <p>通过触摸和声音引导，帮助您学习书写汉字</p>
+        </div>
+        
+        <div class="menu-container">
+            <!-- 个人信息设置 -->
+            <a href="profile.html" class="menu-item">
+                <div class="menu-icon icon-profile">👤</div>
+                <div class="menu-text">
+                    <h3>个人信息设置</h3>
+                    <p>设置您的姓名并创建个性化学习计划</p>
+                </div>
+                <div class="arrow">›</div>
+            </a>
+            
+            <!-- 笔画学习模块 -->
+            <a href="strokes.html" class="menu-item">
+                <div class="menu-icon icon-stroke">✏️</div>
+                <div class="menu-text">
+                    <h3>笔画学习</h3>
+                    <p>学习基础笔画：横、竖、撇、捺、点等</p>
+                </div>
+                <div class="arrow">›</div>
+            </a>
+            
+            <!-- 单字练习模块 -->
+            <a href="characters.html" class="menu-item">
+                <div class="menu-icon icon-character">字</div>
+                <div class="menu-text">
+                    <h3>单字练习</h3>
+                    <p>逐笔引导学习单个汉字的书写</p>
+                </div>
+                <div class="arrow">›</div>
+            </a>
+            
+            <!-- 完整签名训练 -->
+            <a href="signature.html" class="menu-item">
+                <div class="menu-icon icon-signature">✍️</div>
+                <div class="menu-text">
+                    <h3>完整签名训练</h3>
+                    <p>练习连贯书写您的全名</p>
+                </div>
+                <div class="arrow">›</div>
+            </a>
+        </div>
+    </div>
+    
+    <!-- 语音助手按钮 -->
+    <button class="assistant-button" aria-label="语音助手">🗣️</button>
+    
+    <footer>
+        视障人士汉字书写学习应用 © 2023
+    </footer>
+</body>
+</html> 
