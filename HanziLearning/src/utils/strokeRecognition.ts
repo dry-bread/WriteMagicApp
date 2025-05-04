@@ -81,7 +81,7 @@ export function checkStroke(
       return {correct: true, feedback: "很好！捺画正确"};
     
     case "点":
-      if (distance > 20) {
+      if (distance > 30) {
         return {correct: false, feedback: "点画应该短促有力"};
       }
       return {correct: true, feedback: "很好！点画正确"};

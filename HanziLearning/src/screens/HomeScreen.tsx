@@ -29,7 +29,7 @@ const HomeScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor="#3498db" barStyle="light-content" />
-      
+
       {/* 顶部标题栏 */}
       <View style={styles.header}>
         <Text style={styles.appTitle}>汉字书写学习</Text>
@@ -37,32 +37,18 @@ const HomeScreen = () => {
           <Text style={styles.voiceAssistIcon}>🔊</Text>
         </TouchableOpacity>
       </View>
-      
+
       {/* 主要内容区域 */}
       <View style={styles.mainContent}>
         <View style={styles.welcomeMessage}>
           <Text style={styles.welcomeTitle}>欢迎使用汉字书写学习</Text>
           <Text style={styles.welcomeSubtitle}>通过触摸和声音引导，帮助您学习书写汉字</Text>
         </View>
-        
+
         <View style={styles.menuContainer}>
-          {/* 个人信息设置 */}
-          <TouchableOpacity 
-            style={styles.menuItem} 
-            onPress={() => navigation.navigate('Profile')}
-          >
-            <View style={[styles.menuIcon, styles.iconProfile]}>
-              <Text style={styles.iconText}>👤</Text>
-            </View>
-            <View style={styles.menuText}>
-              <Text style={styles.menuTitle}>个人信息设置</Text>
-              <Text style={styles.menuDescription}>设置您的姓名并创建个性化学习计划</Text>
-            </View>
-            <Text style={styles.arrow}>›</Text>
-          </TouchableOpacity>
-          
+
           {/* 笔画学习模块 */}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.menuItem}
             onPress={() => navigation.navigate('Strokes')}
           >
@@ -75,9 +61,24 @@ const HomeScreen = () => {
             </View>
             <Text style={styles.arrow}>›</Text>
           </TouchableOpacity>
-          
+
+          {/* 个人信息设置 */}
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('Profile')}
+          >
+            <View style={[styles.menuIcon, styles.iconProfile]}>
+              <Text style={styles.iconText}>👤</Text>
+            </View>
+            <View style={styles.menuText}>
+              <Text style={styles.menuTitle}>个人信息设置</Text>
+              <Text style={styles.menuDescription}>设置您的姓名并创建个性化学习计划</Text>
+            </View>
+            <Text style={styles.arrow}>›</Text>
+          </TouchableOpacity>
+
           {/* 单字练习模块 */}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.menuItem}
             onPress={() => navigation.navigate('Characters')}
           >
@@ -90,9 +91,9 @@ const HomeScreen = () => {
             </View>
             <Text style={styles.arrow}>›</Text>
           </TouchableOpacity>
-          
+
           {/* 完整签名训练 */}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.menuItem}
             onPress={() => navigation.navigate('Signature')}
           >
@@ -107,12 +108,12 @@ const HomeScreen = () => {
           </TouchableOpacity>
         </View>
       </View>
-      
+
       {/* 语音助手按钮 */}
       <TouchableOpacity style={styles.assistantButton}>
         <Text style={styles.assistantIcon}>🗣️</Text>
       </TouchableOpacity>
-      
+
       {/* 底部信息 */}
       <View style={styles.footer}>
         <Text style={styles.footerText}>视障人士汉字书写学习应用 © 2023</Text>
