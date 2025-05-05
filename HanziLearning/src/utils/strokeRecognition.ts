@@ -9,7 +9,7 @@ export function checkStroke(
 ): {correct: boolean, feedback: string} {
   
   // 至少要有一定数量的点
-  if (points.length < 5) {
+  if (points.length < 2) {
     return {correct: false, feedback: "笔画太短了，请重试"};
   }
   
