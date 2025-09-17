@@ -8,13 +8,14 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 // 导入页面组件
-import { HomeScreen, ProfileScreen, CharactersScreen, SignatureScreen, StrokesScreen } from './src/screens';
+import { HomeScreen, ProfileScreen, CharactersScreen, SignatureScreen, StrokesScreen, StrokeSelectionScreen } from './src/screens';
 
 // 定义导航参数类型
 type RootStackParamList = {
   Home: undefined;
   Profile: undefined;
-  Strokes: undefined;
+  StrokeSelection: undefined;
+  Strokes: { selectedStrokeIndex?: number };
   Characters: undefined;
   Signature: undefined;
 };
@@ -39,6 +40,7 @@ function App(): React.JSX.Element {
         }}>
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="Profile" component={ProfileScreen} />
+        <Stack.Screen name="StrokeSelection" component={StrokeSelectionScreen} />
         <Stack.Screen name="Strokes" component={StrokesScreen} />
         <Stack.Screen name="Characters" component={CharactersScreen} />
         <Stack.Screen name="Signature" component={SignatureScreen} />

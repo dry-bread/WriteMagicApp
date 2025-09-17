@@ -13,7 +13,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 type RootStackParamList = {
   Home: undefined;
   Profile: undefined;
-  Strokes: undefined;
+  StrokeSelection: undefined;
+  Strokes: { selectedStrokeIndex?: number };
   Characters: undefined;
   Signature: undefined;
 };
@@ -33,9 +34,6 @@ const HomeScreen = () => {
       {/* 顶部标题栏 */}
       <View style={styles.header}>
         <Text style={styles.appTitle}>汉字书写学习</Text>
-        <TouchableOpacity style={styles.voiceAssistButton}>
-          <Text style={styles.voiceAssistIcon}>🔊</Text>
-        </TouchableOpacity>
       </View>
 
       {/* 主要内容区域 */}
@@ -50,7 +48,7 @@ const HomeScreen = () => {
           {/* 笔画学习模块 */}
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => navigation.navigate('Strokes')}
+            onPress={() => navigation.navigate('StrokeSelection')}
           >
             <View style={[styles.menuIcon, styles.iconStroke]}>
               <Text style={styles.iconText}>✏️</Text>
@@ -63,6 +61,7 @@ const HomeScreen = () => {
           </TouchableOpacity>
 
           {/* 个人信息设置 */}
+          {/**
           <TouchableOpacity
             style={styles.menuItem}
             onPress={() => navigation.navigate('Profile')}
@@ -76,8 +75,10 @@ const HomeScreen = () => {
             </View>
             <Text style={styles.arrow}>›</Text>
           </TouchableOpacity>
+          */}
 
           {/* 单字练习模块 */}
+          {/**
           <TouchableOpacity
             style={styles.menuItem}
             onPress={() => navigation.navigate('Characters')}
@@ -91,8 +92,10 @@ const HomeScreen = () => {
             </View>
             <Text style={styles.arrow}>›</Text>
           </TouchableOpacity>
+          */}
 
           {/* 完整签名训练 */}
+          {/**
           <TouchableOpacity
             style={styles.menuItem}
             onPress={() => navigation.navigate('Signature')}
@@ -106,17 +109,8 @@ const HomeScreen = () => {
             </View>
             <Text style={styles.arrow}>›</Text>
           </TouchableOpacity>
+          */}
         </View>
-      </View>
-
-      {/* 语音助手按钮 */}
-      <TouchableOpacity style={styles.assistantButton}>
-        <Text style={styles.assistantIcon}>🗣️</Text>
-      </TouchableOpacity>
-
-      {/* 底部信息 */}
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>视障人士汉字书写学习应用 © 2023</Text>
       </View>
     </SafeAreaView>
   );
@@ -253,4 +247,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default HomeScreen; 
+export default HomeScreen;

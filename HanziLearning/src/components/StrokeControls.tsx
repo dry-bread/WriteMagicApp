@@ -32,32 +32,6 @@ const StrokeControls: React.FC<StrokeControlsProps> = ({
           <Text style={styles.currentStrokeText}>{currentStrokeName}</Text>
           <Text style={styles.strokeDesc}> ({strokeDesc})</Text>
         </Text>
-        <View style={styles.controlButtons}>
-          <TouchableOpacity 
-            style={styles.controlButton}
-            onPress={onPrevious}
-          >
-            <Text style={styles.controlButtonText}>◀</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.controlButton}
-            onPress={onPlayGuide}
-          >
-            <Text style={styles.controlButtonText}>▶️</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.controlButton}
-            onPress={onClear}
-          >
-            <Text style={styles.controlButtonText}>🔄</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.controlButton}
-            onPress={onNext}
-          >
-            <Text style={styles.controlButtonText}>▶</Text>
-          </TouchableOpacity>
-        </View>
       </View>
     </View>
   );

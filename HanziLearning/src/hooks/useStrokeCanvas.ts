@@ -2,11 +2,13 @@ import { useState, useRef, useCallback, useMemo } from 'react';
 import { GestureResponderEvent } from 'react-native';
 import { StrokePoint } from '../constants/strokesData';
 import { checkStroke } from '../utils/strokeRecognition';
+import { VibrationHelper } from '../utils/vibrationHelper';
 
 interface StrokeCanvasOptions {
   onFeedback?: (feedback: string, isCorrect: boolean) => void;
   onStrokeEnd?: (isCorrect: boolean) => void;
   minPointsRequired?: number;
+  enableHapticFeedback?: boolean;
 }
 
 /**
@@ -16,65 +18,111 @@ export default function useStrokeCanvas(expectedStroke: string, options: StrokeC
   const {
     onFeedback,
     onStrokeEnd,
-    minPointsRequired = 5
+    minPointsRequired = 5,
+    enableHapticFeedback = true,
   } = options;
   
   // 状态
   const [points, setPoints] = useState<StrokePoint[]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [feedback, setFeedback] = useState("");
+  const [feedback, setFeedback] = useState('');
   
   // 引用
   const lastUpdateTimeRef = useRef(0);
+  const lastHapticTimeRef = useRef(0);
+  
+  // 震动反馈函数
+  const triggerHapticFeedback = useCallback((type: 'start' | 'move' | 'correct' | 'incorrect') => {
+    if (!enableHapticFeedback) {
+      return;
+    }
+    
+    switch (type) {
+      case 'start':
+        // 开始绘制时的轻微震动
+        VibrationHelper.safeVibrate(50);
+        break;
+      case 'move':
+        // 绘制过程中的轻微触觉反馈（限制频率）
+        const now = Date.now();
+        if (now - lastHapticTimeRef.current > 100) { // 每100ms最多一次
+          VibrationHelper.safeVibrate(10);
+          lastHapticTimeRef.current = now;
+        }
+        break;
+      case 'correct':
+        // 正确完成笔画的愉悦震动模式
+        VibrationHelper.safeVibrate([0, 100, 50, 100]);
+        break;
+      case 'incorrect':
+        // 错误笔画的警告震动模式
+        VibrationHelper.safeVibrate([0, 200, 100, 200, 100, 200]);
+        break;
+    }
+  }, [enableHapticFeedback]);
   
   // 清空画布
   const clearCanvas = useCallback(() => {
     setPoints([]);
-    setFeedback("");
+    setFeedback('');
   }, []);
   
   // 触摸开始
   const handleTouchStart = useCallback((e: GestureResponderEvent) => {
-    if (!e.nativeEvent) return;
+    if (!e.nativeEvent) {
+      return;
+    }
     
     setIsDrawing(true);
+    
+    // 触发开始绘制的震动反馈
+    triggerHapticFeedback('start');
     
     // 记录起点位置
     const startPoint = {
       x: e.nativeEvent.locationX || 0,
       y: e.nativeEvent.locationY || 0,
-      time: Date.now()
+      time: Date.now(),
     };
     
     // 重置笔迹
     setPoints([startPoint]);
     
     // 清除反馈
-    setFeedback("");
-  }, []);
+    setFeedback('');
+  }, [triggerHapticFeedback]);
   
   // 触摸移动
   const handleTouchMove = useCallback((e: GestureResponderEvent) => {
-    if (!isDrawing || !e.nativeEvent) return;
+    if (!isDrawing || !e.nativeEvent) {
+      return;
+    }
     
     // 限制更新频率
     const now = Date.now();
-    if (now - lastUpdateTimeRef.current < 10) return;
+    if (now - lastUpdateTimeRef.current < 10) {
+      return;
+    }
     lastUpdateTimeRef.current = now;
+    
+    // 触发移动时的震动反馈
+    triggerHapticFeedback('move');
     
     // 获取相对于视图的触摸坐标
     const { locationX, locationY } = e.nativeEvent;
     
     // 添加新点
     setPoints(prev => {
-      if (prev.length === 0) return [{x: locationX, y: locationY, time: now}];
+      if (prev.length === 0) {
+        return [{x: locationX, y: locationY, time: now}];
+      }
       
       // 获取上一个点
       const lastPoint = prev[prev.length - 1];
       
       // 计算与上一点的距离
       const distance = Math.sqrt(
-        Math.pow(locationX - lastPoint.x, 2) + 
+        Math.pow(locationX - lastPoint.x, 2) +
         Math.pow(locationY - lastPoint.y, 2)
       );
       
@@ -89,7 +137,7 @@ export default function useStrokeCanvas(expectedStroke: string, options: StrokeC
           interpolatedPoints.push({
             x: lastPoint.x + (locationX - lastPoint.x) * ratio,
             y: lastPoint.y + (locationY - lastPoint.y) * ratio,
-            time: now - (steps - i)
+            time: now - (steps - i),
           });
         }
         
@@ -99,11 +147,13 @@ export default function useStrokeCanvas(expectedStroke: string, options: StrokeC
       // 添加新点
       return [...prev, {x: locationX, y: locationY, time: now}];
     });
-  }, [isDrawing]);
+  }, [isDrawing, triggerHapticFeedback]);
   
   // 触摸结束
   const handleTouchEnd = useCallback(() => {
-    if (!isDrawing) return;
+    if (!isDrawing) {
+      return;
+    }
     
     setIsDrawing(false);
     
@@ -113,19 +163,25 @@ export default function useStrokeCanvas(expectedStroke: string, options: StrokeC
       const result = checkStroke(points, expectedStroke);
       setFeedback(result.feedback);
       
+      // 触发相应的震动反馈
+      triggerHapticFeedback(result.correct ? 'correct' : 'incorrect');
+      
       // 调用外部回调
       onFeedback?.(result.feedback, result.correct);
       onStrokeEnd?.(result.correct);
     } else {
-      const shortFeedback = "笔画太短了，请重试";
+      const shortFeedback = '笔画太短了，请重试';
       setFeedback(shortFeedback);
+      triggerHapticFeedback('incorrect');
       onFeedback?.(shortFeedback, false);
     }
-  }, [isDrawing, points, expectedStroke, minPointsRequired, onFeedback, onStrokeEnd]);
+  }, [isDrawing, points, expectedStroke, minPointsRequired, onFeedback, onStrokeEnd, triggerHapticFeedback]);
   
   // 使用useMemo优化路径计算
   const pathData = useMemo(() => {
-    if (points.length < 2) return "";
+    if (points.length < 2) {
+      return '';
+    }
     
     return points.reduce((path, point, i) => {
       // 使用贝塞尔曲线平滑路径
@@ -140,7 +196,7 @@ export default function useStrokeCanvas(expectedStroke: string, options: StrokeC
         const cpY = (prev.y + point.y) / 2;
         return path + ` Q ${prev.x},${prev.y} ${cpX},${cpY} L ${point.x},${point.y}`;
       }
-    }, "");
+    }, '');
   }, [points]);
   
   // 响应器配置
@@ -149,7 +205,7 @@ export default function useStrokeCanvas(expectedStroke: string, options: StrokeC
     onMoveShouldSetResponder: () => true,
     onResponderGrant: handleTouchStart,
     onResponderMove: handleTouchMove,
-    onResponderRelease: handleTouchEnd
+    onResponderRelease: handleTouchEnd,
   };
   
   return {
@@ -158,6 +214,6 @@ export default function useStrokeCanvas(expectedStroke: string, options: StrokeC
     feedback,
     pathData,
     clearCanvas,
-    responderHandlers
+    responderHandlers,
   };
-} 
+}

@@ -6,9 +6,8 @@ import {
   StatusBar,
   SafeAreaView,
   Alert,
-  StyleSheet,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 
 // 导入常量和组件
 import { strokes } from '../constants/strokesData';
@@ -17,12 +16,23 @@ import StrokeControls from '../components/StrokeControls';
 import ActionButtons from '../components/ActionButtons';
 import commonStyles from '../styles/commonStyles';
 
+type RootStackParamList = {
+  StrokeSelection: undefined;
+  Strokes: { selectedStrokeIndex?: number };
+};
+
+type StrokesScreenRouteProp = RouteProp<RootStackParamList, 'Strokes'>;
+
 /**
  * 笔画学习主屏幕
  */
 const StrokesScreen = () => {
   const navigation = useNavigation();
-  const [currentStrokeIndex, setCurrentStrokeIndex] = useState(0);
+  const route = useRoute<StrokesScreenRouteProp>();
+  
+  // 从路由参数获取初始笔画索引，如果没有传递则默认为0
+  const initialStrokeIndex = route.params?.selectedStrokeIndex ?? 0;
+  const [currentStrokeIndex, setCurrentStrokeIndex] = useState(initialStrokeIndex);
   
   // 获取当前笔画信息
   const currentStrokeInfo = strokes[currentStrokeIndex];
@@ -39,7 +49,7 @@ const StrokesScreen = () => {
   
   // 触发触感引导
   const triggerHapticFeedback = useCallback(() => {
-    Alert.alert("触感引导", "触感引导已启动，请感受振动模式");
+    Alert.alert('触感引导', '触感引导已启动，请感受振动模式');
     // 在实际应用中，这里应该触发设备振动
   }, []);
   
@@ -52,7 +62,7 @@ const StrokesScreen = () => {
   // 播放引导动画
   const playGuideAnimation = useCallback(() => {
     // 在实际应用中，这里应该播放引导动画
-    Alert.alert("播放引导", "正在播放笔画引导动画");
+    Alert.alert('播放引导', '正在播放笔画引导动画');
   }, []);
   
   // 处理正确笔画后的操作
@@ -72,16 +82,13 @@ const StrokesScreen = () => {
       
       {/* 顶部标题栏 */}
       <View style={commonStyles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={commonStyles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Text style={commonStyles.backButtonText}>←</Text>
+          <Text style={commonStyles.backButtonText}>返回</Text>
         </TouchableOpacity>
         <Text style={commonStyles.appTitle}>笔画学习 - {currentStrokeInfo.name}</Text>
-        <TouchableOpacity style={commonStyles.voiceAssistButton}>
-          <Text style={commonStyles.voiceAssistIcon}>🔊</Text>
-        </TouchableOpacity>
       </View>
       
       {/* 主要内容区域 */}
@@ -100,7 +107,7 @@ const StrokesScreen = () => {
           />
           
           {/* 绘制画布 */}
-          <StrokeCanvas 
+          <StrokeCanvas
             currentStroke={currentStrokeInfo.name}
             strokeIcon={currentStrokeInfo.icon}
             strokeDesc={currentStrokeInfo.desc}
@@ -114,13 +121,8 @@ const StrokesScreen = () => {
           />
         </View>
       </View>
-      
-      {/* 底部信息 */}
-      <View style={commonStyles.footer}>
-        <Text style={commonStyles.footerText}>视障人士汉字书写学习应用 © 2023</Text>
-      </View>
     </SafeAreaView>
   );
 };
 
-export default StrokesScreen; 
+export default StrokesScreen;
