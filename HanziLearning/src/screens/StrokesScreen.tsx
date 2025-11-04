@@ -47,12 +47,6 @@ const StrokesScreen = () => {
     setCurrentStrokeIndex((prevIndex) => (prevIndex + 1) % strokes.length);
   }, []);
   
-  // 触发触感引导
-  const triggerHapticFeedback = useCallback(() => {
-    Alert.alert('触感引导', '触感引导已启动，请感受振动模式');
-    // 在实际应用中，这里应该触发设备振动
-  }, []);
-  
   // 清空画布
   const clearCanvas = useCallback(() => {
     // 该方法将传递给StrokeCanvas组件，
@@ -108,6 +102,7 @@ const StrokesScreen = () => {
           
           {/* 绘制画布 */}
           <StrokeCanvas
+            key="stroke-canvas"
             currentStroke={currentStrokeInfo.name}
             strokeIcon={currentStrokeInfo.icon}
             strokeDesc={currentStrokeInfo.desc}
@@ -116,7 +111,6 @@ const StrokesScreen = () => {
           
           {/* 操作按钮 */}
           <ActionButtons
-            onTriggerHaptic={triggerHapticFeedback}
             onClearCanvas={clearCanvas}
           />
         </View>

@@ -2,13 +2,15 @@
  * 视障人士汉字书写学习应用
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StatusBar, useColorScheme } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 // 导入页面组件
 import { HomeScreen, ProfileScreen, CharactersScreen, SignatureScreen, StrokesScreen, StrokeSelectionScreen } from './src/screens';
+// 导入音效管理工具
+import SoundHelper from './src/utils/soundHelper';
 
 // 定义导航参数类型
 type RootStackParamList = {
@@ -25,6 +27,16 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function App(): React.JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
+
+  // 初始化音效
+  useEffect(() => {
+    SoundHelper.initialize();
+
+    // 组件卸载时释放音效资源
+    return () => {
+      SoundHelper.release();
+    };
+  }, []);
 
   return (
     <NavigationContainer>

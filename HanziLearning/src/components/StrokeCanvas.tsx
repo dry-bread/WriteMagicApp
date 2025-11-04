@@ -1,8 +1,8 @@
 import React, { useRef, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, AccessibilityInfo, findNodeHandle, Vibration, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, AccessibilityInfo, findNodeHandle, Vibration } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import Sound from 'react-native-sound';
 import useStrokeCanvas from '../hooks/useStrokeCanvas';
+import SoundHelper from '../utils/soundHelper';
 
 interface StrokeCanvasProps {
   currentStroke: string;
@@ -25,58 +25,13 @@ const StrokeCanvas: React.FC<StrokeCanvasProps> = ({
   const canvasRef = useRef<View>(null);
   const isFirstLoadRef = useRef(true);
 
-  // 初始化音频文件
-  const successSound = useRef<Sound | null>(null);
-  const errorSound = useRef<Sound | null>(null);
-
-  useEffect(() => {
-    // 设置音频
-    Sound.setCategory('Playback');
-    
-    // 加载成功音效
-    successSound.current = new Sound('success_fanfare_trumpets_6185.mp3', Sound.MAIN_BUNDLE, (error) => {
-      if (error) {
-        console.log('Failed to load success sound', error);
-      } else {
-        console.log('Success sound loaded successfully');
-      }
-    });
-
-    // 加载失败音效
-    errorSound.current = new Sound('failed_295059.mp3', Sound.MAIN_BUNDLE, (error) => {
-      if (error) {
-        console.log('Failed to load error sound', error);
-      } else {
-        console.log('Error sound loaded successfully');
-      }
-    });
-
-    return () => {
-      // 清理音频资源
-      if (successSound.current) {
-        successSound.current.release();
-      }
-      if (errorSound.current) {
-        errorSound.current.release();
-      }
-    };
-  }, []); // 追踪是否首次加载
-
-  // 音效播放函数
-  const playSuccessSound = useCallback(() => {
+  // 震动和音效反馈函数
+  const playSuccessVibration = useCallback(() => {
     try {
-      console.log('Playing success sound/vibration');
-      
-      // 播放音效
-      if (successSound.current) {
-        successSound.current.play((success) => {
-          if (!success) {
-            console.log('Failed to play success sound');
-          }
-        });
-      }
-      
-      // 配合震动反馈
+      console.log('Playing success feedback');
+      // 播放成功音效
+      SoundHelper.playSuccess();
+      // 震动反馈
       if (enableHapticFeedback) {
         Vibration.vibrate(200);
       }
@@ -85,20 +40,12 @@ const StrokeCanvas: React.FC<StrokeCanvasProps> = ({
     }
   }, [enableHapticFeedback]);
 
-  const playErrorSound = useCallback(() => {
+  const playErrorVibration = useCallback(() => {
     try {
-      console.log('Playing error sound/vibration');
-      
-      // 播放音效
-      if (errorSound.current) {
-        errorSound.current.play((success) => {
-          if (!success) {
-            console.log('Failed to play error sound');
-          }
-        });
-      }
-      
-      // 配合震动反馈
+      console.log('Playing error feedback');
+      // 播放错误音效
+      SoundHelper.playError();
+      // 震动反馈
       if (enableHapticFeedback) {
         Vibration.vibrate(500);
       }
@@ -119,11 +66,11 @@ const StrokeCanvas: React.FC<StrokeCanvasProps> = ({
     onStrokeEnd: (isCorrect) => {
       console.log('Stroke ended, isCorrect:', isCorrect);
       
-      // 立即播放音效反馈
+      // 立即播放震动反馈
       if (isCorrect) {
-        playSuccessSound();
+        playSuccessVibration();
       } else {
-        playErrorSound();
+        playErrorVibration();
       }
       
       // 如果笔画识别正确，清空笔画轨迹
@@ -217,42 +164,13 @@ const StrokeCanvas: React.FC<StrokeCanvasProps> = ({
     }
   }, [strokeDesc]);
 
-  // 页面加载时播放无障碍引导信息（只在首次加载时播报详细信息）
+  // 页面加载时立即设置焦点并播放引导信息
   useEffect(() => {
     if (isTalkBackEnabled && isFirstLoadRef.current) {
       // 标记已经播报过首次引导
       isFirstLoadRef.current = false;
       
-      // 1. 先说明双指绘制避免手势冲突
-      const message1 = '为了避免和无障碍手势冲突，需要双指在笔画绘制区域绘制笔画。';
-      
-      // 2. 描述绘制区域位置
-      const message2 = '绘制区域是一个占据屏幕大部分的矩形区域。它位于屏幕中央，左右两侧各距离屏幕边缘约一厘米，上下延伸占据了屏幕高度的三分之二。绘制笔画时您能感受到轻微的震动。';
-      
-      // 3. 说明操作方式
-      const message3 = '点按两次即可获取笔画详细指导，点按两次并按住即可清除笔画。';
-      
-      // 4. 操作流程说明
-      const message4 = '听到语音指示后，使用双指在屏幕上绘制笔画，画完后抬起双指，系统会判断笔画是否正确。';
-      
-      // 按顺序播放语音，每条消息间隔3秒
-      setTimeout(() => {
-        AccessibilityInfo.announceForAccessibility(message1);
-      }, 1000);
-      
-      setTimeout(() => {
-        AccessibilityInfo.announceForAccessibility(message2);
-      }, 4000);
-      
-      setTimeout(() => {
-        AccessibilityInfo.announceForAccessibility(message3);
-      }, 7000);
-      
-      setTimeout(() => {
-        AccessibilityInfo.announceForAccessibility(message4);
-      }, 10000);
-      
-      // 组件挂载后自动将焦点设置到绘图区域
+      // 立即将焦点设置到绘图区域，让TalkBack读取区域描述
       setTimeout(() => {
         if (canvasRef.current) {
           const reactTag = findNodeHandle(canvasRef.current);
@@ -260,19 +178,37 @@ const StrokeCanvas: React.FC<StrokeCanvasProps> = ({
             AccessibilityInfo.setAccessibilityFocus(reactTag);
           }
         }
-      }, 11000); // 在所有引导播报完成后设置焦点
+      }, 100); // 立即设置焦点
+      
+      // TalkBack会先读取："笔画练习区域。绘制区域位于屏幕中央..."
+      // 然后我们再播报后续的引导信息
+      
+      // 1. 说明双指绘制（等待TalkBack读完区域描述）
+      const message1 = '为了避免和无障碍手势冲突，需要使用双指在绘制区域绘制笔画。';
+      
+      setTimeout(() => {
+        AccessibilityInfo.announceForAccessibility(message1);
+      }, 3000);
     }
   }, [isTalkBackEnabled]);
 
-  // 笔画变更时的简单播报（包括首次加载时的当前笔画播报）
+  // 笔画变更时的播报
   useEffect(() => {
     if (isTalkBackEnabled) {
-      const delay = isFirstLoadRef.current ? 13000 : 500; // 首次加载延迟更长，笔画切换延迟较短
-      
-      setTimeout(() => {
-        const message = `当前要练习的笔画是${currentStroke}。${getStrokeGuidance(currentStroke)}`;
-        AccessibilityInfo.announceForAccessibility(message);
-      }, delay);
+      // 首次加载时，在双指说明后播报笔画信息
+      if (isFirstLoadRef.current) {
+        setTimeout(() => {
+          const message = `当前要练习的笔画是${currentStroke}。${getStrokeGuidance(currentStroke)}`;
+          AccessibilityInfo.announceForAccessibility(message);
+        }, 6000);
+      } else {
+        // 切换笔画时，立即播报新笔画信息，但不重新设置焦点
+        // 使用更短的延迟确保切换动画完成
+        setTimeout(() => {
+          const message = `下一个笔画。当前要练习的笔画是${currentStroke}。${getStrokeGuidance(currentStroke)}`;
+          AccessibilityInfo.announceForAccessibility(message);
+        }, 100);
+      }
     }
   }, [currentStroke, isTalkBackEnabled, getStrokeGuidance]);
 
@@ -291,28 +227,12 @@ const StrokeCanvas: React.FC<StrokeCanvasProps> = ({
 
   return (
     <View style={styles.canvasContainer}>
-      {/* 临时测试按钮 */}
-      <View style={{position: 'absolute', top: 10, right: 10, zIndex: 1000, flexDirection: 'row'}}>
-        <TouchableOpacity 
-          onPress={playSuccessSound}
-          style={{backgroundColor: 'green', padding: 8, marginRight: 5, borderRadius: 4}}
-        >
-          <Text style={{color: 'white', fontSize: 12}}>测试成功</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          onPress={playErrorSound}
-          style={{backgroundColor: 'red', padding: 8, borderRadius: 4}}
-        >
-          <Text style={{color: 'white', fontSize: 12}}>测试失败</Text>
-        </TouchableOpacity>
-      </View>
-
       <View
         ref={canvasRef}
         style={styles.canvas}
         accessible={true}
-        accessibilityLabel={'笔画练习区域'}
-        accessibilityHint="在此绘制笔画"
+        accessibilityLabel={'笔画练习区域。绘制区域位于屏幕中央，左右两侧距离屏幕边缘约一厘米，上下占据屏幕高度的三分之二。绘制笔画时您会感受到轻微震动。'}
+        accessibilityHint="使用双指绘制笔画"
         accessibilityRole="none"
         accessibilityActions={[
           {name: 'activate', label: '获取笔画详细指导'},
@@ -329,7 +249,6 @@ const StrokeCanvas: React.FC<StrokeCanvasProps> = ({
               break;
           }
         }}
-        accessibilityLiveRegion="polite"
         importantForAccessibility="yes"
         {...responderHandlers}
       >
