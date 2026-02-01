@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,8 @@ import {
   StatusBar,
   SafeAreaView,
   Alert,
+  AccessibilityInfo,
+  findNodeHandle,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 
@@ -79,10 +81,20 @@ const StrokesScreen = () => {
         <TouchableOpacity
           style={commonStyles.backButton}
           onPress={() => navigation.goBack()}
+          accessible={true}
+          accessibilityLabel="返回上一页"
+          accessibilityRole="button"
+          accessibilityElementsHidden={false}
         >
           <Text style={commonStyles.backButtonText}>返回</Text>
         </TouchableOpacity>
-        <Text style={commonStyles.appTitle}>笔画学习 - {currentStrokeInfo.name}</Text>
+        <Text 
+          style={commonStyles.appTitle}
+          accessible={true}
+          accessibilityRole="header"
+        >
+          笔画学习 - {currentStrokeInfo.name}
+        </Text>
       </View>
       
       {/* 主要内容区域 */}

@@ -1,5 +1,5 @@
-import React, { useRef, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, AccessibilityInfo, findNodeHandle, Vibration } from 'react-native';
+import React, { useRef, useEffect, useCallback, useState } from 'react';
+import { View, Text, StyleSheet, AccessibilityInfo, findNodeHandle, Vibration, Platform, Pressable } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import useStrokeCanvas from '../hooks/useStrokeCanvas';
 import SoundHelper from '../utils/soundHelper';
@@ -23,7 +23,15 @@ const StrokeCanvas: React.FC<StrokeCanvasProps> = ({
   enableHapticFeedback = true,
 }) => {
   const canvasRef = useRef<View>(null);
+  const drawingModeButtonRef = useRef<View>(null);
   const isFirstLoadRef = useRef(true);
+  
+  // 绘制模式状态 - 用于VoiceOver用户切换到直接触摸模式
+  const [isDrawingMode, setIsDrawingMode] = useState(false);
+  const drawingModeTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // 使用ref来追踪TalkBack状态，避免闭包问题
+  const isTalkBackEnabledRef = useRef(false);
 
   // 震动和音效反馈函数
   const playSuccessVibration = useCallback(() => {
@@ -78,31 +86,31 @@ const StrokeCanvas: React.FC<StrokeCanvasProps> = ({
         clearCanvas();
       }
       
-      // TalkBack模式下朗读详细的反馈结果
-      if (isTalkBackEnabled) {
-        const resultMessage = isCorrect
-          ? `很好，您的${currentStroke}笔画书写正确，即将进入下一个笔画。`
-          : `${feedback}。请再次尝试书写${currentStroke}，${getStrokeGuidance(currentStroke)}`;
+      // 使用ref来检查TalkBack状态，避免闭包问题
+      const isTalkBackOn = isTalkBackEnabledRef.current;
+      console.log('TalkBack enabled (from ref):', isTalkBackOn);
+      
+      // 无论是否开启TalkBack，都播报结果（因为在绘制模式下用户需要知道结果）
+      const resultMessage = isCorrect
+        ? `书写正确！您的${currentStroke}笔画很标准。即将进入下一个笔画。`
+        : `书写不正确。${feedback || '请再试一次'}。请继续书写${currentStroke}。`;
+      
+      console.log('Announcing result:', resultMessage);
+      
+      // 播放语音反馈
+      AccessibilityInfo.announceForAccessibility(resultMessage);
+      
+      // 如果笔画正确，等待反馈读完再通知父组件
+      if (isCorrect) {
+        // 估算语音播报时间
+        const estimatedTime = Math.max(resultMessage.length * 150, 2500);
         
-        // 先播放反馈
-        AccessibilityInfo.announceForAccessibility(resultMessage);
-        
-        // 如果笔画正确，等待反馈读完再通知父组件
-        if (isCorrect) {
-          // 估算语音播报时间，一般每个字需要0.2秒
-          const messageLength = resultMessage.length;
-          const estimatedTime = Math.max(messageLength * 200, 2000); // 至少2秒
-          
-          setTimeout(() => {
-            // 延迟通知父组件，确保语音反馈已完成
-            onCorrectStroke?.(isCorrect);
-          }, estimatedTime);
-        } else {
-          // 如果笔画不正确，直接通知父组件
+        setTimeout(() => {
+          // 延迟通知父组件，确保语音反馈已完成
           onCorrectStroke?.(isCorrect);
-        }
+        }, estimatedTime);
       } else {
-        // 非TalkBack模式，直接通知父组件
+        // 如果笔画不正确，直接通知父组件
         onCorrectStroke?.(isCorrect);
       }
     },
@@ -128,6 +136,7 @@ const StrokeCanvas: React.FC<StrokeCanvasProps> = ({
     const checkScreenReader = () => {
       AccessibilityInfo.isScreenReaderEnabled().then(enabled => {
         setIsTalkBackEnabled(enabled);
+        isTalkBackEnabledRef.current = enabled;
       });
     };
     
@@ -136,7 +145,10 @@ const StrokeCanvas: React.FC<StrokeCanvasProps> = ({
     // 监听屏幕阅读器状态变化
     const subscription = AccessibilityInfo.addEventListener(
       'screenReaderChanged',
-      checkScreenReader
+      (enabled) => {
+        setIsTalkBackEnabled(enabled);
+        isTalkBackEnabledRef.current = enabled;
+      }
     );
     
     return () => {
@@ -164,33 +176,93 @@ const StrokeCanvas: React.FC<StrokeCanvasProps> = ({
     }
   }, [strokeDesc]);
 
-  // 页面加载时立即设置焦点并播放引导信息
+  // 页面加载时立即设置焦点到绘制模式按钮
   useEffect(() => {
     if (isTalkBackEnabled && isFirstLoadRef.current) {
       // 标记已经播报过首次引导
       isFirstLoadRef.current = false;
       
-      // 立即将焦点设置到绘图区域，让TalkBack读取区域描述
-      setTimeout(() => {
-        if (canvasRef.current) {
-          const reactTag = findNodeHandle(canvasRef.current);
+      // 多次尝试设置焦点，确保按钮已渲染
+      const setFocusToButton = () => {
+        if (drawingModeButtonRef.current) {
+          const reactTag = findNodeHandle(drawingModeButtonRef.current);
+          console.log('Setting focus to drawing mode button, reactTag:', reactTag);
           if (reactTag) {
             AccessibilityInfo.setAccessibilityFocus(reactTag);
+            return true;
           }
         }
-      }, 100); // 立即设置焦点
+        return false;
+      };
       
-      // TalkBack会先读取："笔画练习区域。绘制区域位于屏幕中央..."
-      // 然后我们再播报后续的引导信息
+      // 第一次尝试 - 1秒后
+      const timer1 = setTimeout(() => {
+        if (!setFocusToButton()) {
+          // 第二次尝试 - 1.5秒后
+          setTimeout(setFocusToButton, 500);
+        }
+      }, 1000);
       
-      // 1. 说明双指绘制（等待TalkBack读完区域描述）
-      const message1 = '为了避免和无障碍手势冲突，需要使用双指在绘制区域绘制笔画。';
+      // 播报提示
+      const announceTimer = setTimeout(() => {
+        AccessibilityInfo.announceForAccessibility(
+          `当前笔画是${currentStroke}。双击屏幕进入绘制模式开始书写。`
+        );
+      }, 2000);
       
-      setTimeout(() => {
-        AccessibilityInfo.announceForAccessibility(message1);
-      }, 3000);
+      return () => {
+        clearTimeout(timer1);
+        clearTimeout(announceTimer);
+      };
     }
-  }, [isTalkBackEnabled]);
+  }, [isTalkBackEnabled, currentStroke]);
+  
+  // 进入绘制模式
+  const enterDrawingMode = useCallback(() => {
+    console.log('=== enterDrawingMode called ===');
+    setIsDrawingMode(true);
+    
+    // 清除之前的定时器
+    if (drawingModeTimerRef.current) {
+      clearTimeout(drawingModeTimerRef.current);
+    }
+    
+    // 播放提示音和震动
+    SoundHelper.playSuccess();
+    Vibration.vibrate(100);
+    
+    console.log('Announcing: 已进入绘制模式');
+    AccessibilityInfo.announceForAccessibility(
+      `已进入绘制模式。请用手指书写${currentStroke}笔画。${getStrokeGuidance(currentStroke)}。书写完成后会自动判断结果。如需退出，请用三指单击屏幕。`
+    );
+    
+    // 60秒后自动退出绘制模式（延长时间）
+    drawingModeTimerRef.current = setTimeout(() => {
+      exitDrawingMode();
+    }, 60000);
+  }, [currentStroke, getStrokeGuidance]);
+  
+  // 退出绘制模式
+  const exitDrawingMode = useCallback(() => {
+    setIsDrawingMode(false);
+    
+    if (drawingModeTimerRef.current) {
+      clearTimeout(drawingModeTimerRef.current);
+      drawingModeTimerRef.current = null;
+    }
+    
+    Vibration.vibrate([0, 50, 50, 50]);
+    AccessibilityInfo.announceForAccessibility('已退出绘制模式，恢复正常导航。双击并按住可重新进入绘制模式。');
+  }, []);
+  
+  // 清理定时器
+  useEffect(() => {
+    return () => {
+      if (drawingModeTimerRef.current) {
+        clearTimeout(drawingModeTimerRef.current);
+      }
+    };
+  }, []);
 
   // 笔画变更时的播报
   useEffect(() => {
@@ -227,16 +299,68 @@ const StrokeCanvas: React.FC<StrokeCanvasProps> = ({
 
   return (
     <View style={styles.canvasContainer}>
+      {/* VoiceOver 绘制模式控制按钮 */}
+      {isTalkBackEnabled && !isDrawingMode && (
+        <Pressable
+          ref={drawingModeButtonRef}
+          style={styles.drawingModeButton}
+          accessible={true}
+          accessibilityLabel={`进入绘制模式。当前笔画：${currentStroke}。${getStrokeGuidance(currentStroke)}。双击开始书写。`}
+          accessibilityHint="双击进入绘制模式"
+          accessibilityRole="button"
+          onPress={() => {
+            console.log('=== Pressable onPress triggered - entering drawing mode ===');
+            enterDrawingMode();
+          }}
+        >
+          <Text style={styles.drawingModeButtonText}>
+            双击进入绘制模式
+          </Text>
+          <Text style={styles.strokeHintLarge}>{strokeIcon}</Text>
+          <Text style={styles.drawingModeSubText}>
+            当前笔画：{currentStroke}
+          </Text>
+        </Pressable>
+      )}
+      
+      {/* VoiceOver 绘制模式下 - 绘制状态提示和退出按钮 */}
+      {isTalkBackEnabled && isDrawingMode && (
+        <View 
+          style={styles.drawingModeHeader}
+          pointerEvents="box-none"
+        >
+          <Pressable
+            style={styles.exitDrawingModeButtonLarge}
+            accessible={true}
+            accessibilityLabel={`正在绘制${currentStroke}。请在下方区域用手指书写笔画。书写完成后会自动判断结果。双击此按钮可退出绘制模式。`}
+            accessibilityHint="双击退出绘制模式"
+            accessibilityRole="button"
+            onPress={() => {
+              console.log('=== Pressable onPress triggered - exiting drawing mode ===');
+              exitDrawingMode();
+            }}
+          >
+            <Text style={styles.drawingModeStatusText}>正在绘制：{currentStroke}</Text>
+            <Text style={styles.drawingModeHelpText}>请在下方区域用手指书写笔画</Text>
+            <Text style={styles.exitButtonTextLarge}>双击此处退出绘制模式</Text>
+          </Pressable>
+        </View>
+      )}
+      
       <View
         ref={canvasRef}
         style={styles.canvas}
-        accessible={true}
-        accessibilityLabel={'笔画练习区域。绘制区域位于屏幕中央，左右两侧距离屏幕边缘约一厘米，上下占据屏幕高度的三分之二。绘制笔画时您会感受到轻微震动。'}
-        accessibilityHint="使用双指绘制笔画"
+        // 在绘制模式下禁用无障碍，允许直接触摸
+        accessible={!isDrawingMode}
+        accessibilityLabel={isDrawingMode 
+          ? undefined 
+          : `笔画练习区域。当前笔画：${currentStroke}。${getStrokeGuidance(currentStroke)}`
+        }
+        accessibilityHint={isDrawingMode ? undefined : "双击并按住进入绘制模式"}
         accessibilityRole="none"
-        accessibilityActions={[
+        accessibilityActions={isDrawingMode ? undefined : [
           {name: 'activate', label: '获取笔画详细指导'},
-          {name: 'longpress', label: '清除笔画'},
+          {name: 'longpress', label: '进入绘制模式'},
         ]}
         onAccessibilityAction={(event) => {
           switch (event.nativeEvent.actionName) {
@@ -244,12 +368,11 @@ const StrokeCanvas: React.FC<StrokeCanvasProps> = ({
               handleAccessibilityActivation();
               break;
             case 'longpress':
-              clearCanvas();
-              AccessibilityInfo.announceForAccessibility('笔画已清除，请重新书写');
+              enterDrawingMode();
               break;
           }
         }}
-        importantForAccessibility="yes"
+        importantForAccessibility={isDrawingMode ? "no-hide-descendants" : "yes"}
         {...responderHandlers}
       >
         {/* 绘制区域，确保SVG覆盖整个区域并且位置计算正确 */}
@@ -375,6 +498,87 @@ const styles = StyleSheet.create({
     bottom: 20,
     textAlign: 'center',
     width: '100%',
+  },
+  drawingModeButton: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 100,
+    padding: 20,
+  },
+  drawingModeButtonText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#2196F3',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  strokeHintLarge: {
+    fontSize: 120,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
+  },
+  drawingModeSubText: {
+    fontSize: 20,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 15,
+  },
+  drawingModeHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 200,
+  },
+  exitDrawingModeButtonLarge: {
+    backgroundColor: 'rgba(76, 175, 80, 0.95)',
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+  },
+  drawingModeStatusText: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: 'white',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  drawingModeHelpText: {
+    fontSize: 18,
+    color: 'white',
+    textAlign: 'center',
+    marginBottom: 15,
+  },
+  exitButtonTextLarge: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+  },
+  exitDrawingModeButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: '#f44336',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderRadius: 10,
+    zIndex: 200,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  exitButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
   },
 });
 

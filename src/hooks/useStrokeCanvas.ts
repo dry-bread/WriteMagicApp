@@ -69,7 +69,9 @@ export default function useStrokeCanvas(expectedStroke: string, options: StrokeC
   
   // 触摸开始
   const handleTouchStart = useCallback((e: GestureResponderEvent) => {
+    console.log('=== handleTouchStart called ===');
     if (!e.nativeEvent) {
+      console.log('No nativeEvent');
       return;
     }
     
@@ -151,6 +153,7 @@ export default function useStrokeCanvas(expectedStroke: string, options: StrokeC
   
   // 触摸结束
   const handleTouchEnd = useCallback(() => {
+    console.log('=== handleTouchEnd called ===, isDrawing:', isDrawing, 'points.length:', points.length);
     if (!isDrawing) {
       return;
     }
@@ -160,7 +163,9 @@ export default function useStrokeCanvas(expectedStroke: string, options: StrokeC
     // 只有当有足够的点时才判断笔画
     if (points.length >= minPointsRequired) {
       // 判断笔画
+      console.log('Checking stroke with', points.length, 'points for:', expectedStroke);
       const result = checkStroke(points, expectedStroke);
+      console.log('Stroke check result:', result);
       setFeedback(result.feedback);
       
       // 触发相应的震动反馈
@@ -170,10 +175,12 @@ export default function useStrokeCanvas(expectedStroke: string, options: StrokeC
       onFeedback?.(result.feedback, result.correct);
       onStrokeEnd?.(result.correct);
     } else {
+      console.log('Stroke too short, points:', points.length, 'required:', minPointsRequired);
       const shortFeedback = '笔画太短了，请重试';
       setFeedback(shortFeedback);
       triggerHapticFeedback('incorrect');
       onFeedback?.(shortFeedback, false);
+      onStrokeEnd?.(false);
     }
   }, [isDrawing, points, expectedStroke, minPointsRequired, onFeedback, onStrokeEnd, triggerHapticFeedback]);
   
