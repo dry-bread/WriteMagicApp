@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, AccessibilityInfo, findNodeHandle, Vibration, P
 import Svg, { Path } from 'react-native-svg';
 import useStrokeCanvas from '../hooks/useStrokeCanvas';
 import SoundHelper from '../utils/soundHelper';
+import { enableDirectTouch, disableDirectTouch } from './DirectTouchView';
 
 interface StrokeCanvasProps {
   currentStroke: string;
@@ -222,6 +223,12 @@ const StrokeCanvas: React.FC<StrokeCanvasProps> = ({
     console.log('=== enterDrawingMode called ===');
     setIsDrawingMode(true);
     
+    // 设置 UIAccessibilityTraitAllowsDirectInteraction
+    // 延迟一帧确保 React 渲染完成
+    setTimeout(() => {
+      enableDirectTouch('stroke-canvas');
+    }, 100);
+    
     // 清除之前的定时器
     if (drawingModeTimerRef.current) {
       clearTimeout(drawingModeTimerRef.current);
@@ -245,6 +252,9 @@ const StrokeCanvas: React.FC<StrokeCanvasProps> = ({
   // 退出绘制模式
   const exitDrawingMode = useCallback(() => {
     setIsDrawingMode(false);
+    
+    // 移除 UIAccessibilityTraitAllowsDirectInteraction
+    disableDirectTouch('stroke-canvas');
     
     if (drawingModeTimerRef.current) {
       clearTimeout(drawingModeTimerRef.current);
@@ -347,14 +357,16 @@ const StrokeCanvas: React.FC<StrokeCanvasProps> = ({
         </View>
       )}
       
+      {/* 绘制画布 - 通过原生模块动态设置 AllowsDirectInteraction 特性 */}
       <View
         ref={canvasRef}
         style={styles.canvas}
-        // 在绘制模式下禁用无障碍，允许直接触摸
-        accessible={!isDrawingMode}
-        accessibilityLabel={isDrawingMode 
-          ? undefined 
-          : `笔画练习区域。当前笔画：${currentStroke}。${getStrokeGuidance(currentStroke)}`
+        testID="stroke-canvas"
+        accessible={true}
+        accessibilityLabel={
+          isDrawingMode
+            ? `${currentStroke}笔画绘制区域，请直接书写`
+            : `笔画练习区域。当前笔画：${currentStroke}。${getStrokeGuidance(currentStroke)}`
         }
         accessibilityHint={isDrawingMode ? undefined : "双击并按住进入绘制模式"}
         accessibilityRole="none"
@@ -372,10 +384,9 @@ const StrokeCanvas: React.FC<StrokeCanvasProps> = ({
               break;
           }
         }}
-        importantForAccessibility={isDrawingMode ? "no-hide-descendants" : "yes"}
+        importantForAccessibility="yes"
         {...responderHandlers}
       >
-        {/* 绘制区域，确保SVG覆盖整个区域并且位置计算正确 */}
         <Svg
           style={styles.svgContainer}
           width="100%"
@@ -395,7 +406,6 @@ const StrokeCanvas: React.FC<StrokeCanvasProps> = ({
           )}
         </Svg>
 
-        {/* 当前笔画提示 */}
         <Text
           style={[
             styles.strokeHint,
@@ -407,13 +417,12 @@ const StrokeCanvas: React.FC<StrokeCanvasProps> = ({
           {strokeIcon}
         </Text>
 
-        {/* 反馈信息 */}
         <Text
           style={[
             styles.feedback,
             feedback.includes('很好') ? styles.successFeedback : styles.errorFeedback,
           ]}
-          accessible={true}
+          accessible={!isDrawingMode}
           accessibilityLabel={feedback}
           accessibilityLiveRegion="assertive"
         >

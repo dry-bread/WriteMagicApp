@@ -27,7 +27,9 @@ export default function useStrokeCanvas(expectedStroke: string, options: StrokeC
   const [isDrawing, setIsDrawing] = useState(false);
   const [feedback, setFeedback] = useState('');
   
-  // 引用
+  // 引用 - 用于避免闭包过时问题
+  const isDrawingRef = useRef(false);
+  const pointsRef = useRef<StrokePoint[]>([]);
   const lastUpdateTimeRef = useRef(0);
   const lastHapticTimeRef = useRef(0);
   
@@ -64,6 +66,7 @@ export default function useStrokeCanvas(expectedStroke: string, options: StrokeC
   // 清空画布
   const clearCanvas = useCallback(() => {
     setPoints([]);
+    pointsRef.current = [];
     setFeedback('');
   }, []);
   
@@ -76,6 +79,7 @@ export default function useStrokeCanvas(expectedStroke: string, options: StrokeC
     }
     
     setIsDrawing(true);
+    isDrawingRef.current = true;
     
     // 触发开始绘制的震动反馈
     triggerHapticFeedback('start');
@@ -89,6 +93,7 @@ export default function useStrokeCanvas(expectedStroke: string, options: StrokeC
     
     // 重置笔迹
     setPoints([startPoint]);
+    pointsRef.current = [startPoint];
     
     // 清除反馈
     setFeedback('');
@@ -96,7 +101,7 @@ export default function useStrokeCanvas(expectedStroke: string, options: StrokeC
   
   // 触摸移动
   const handleTouchMove = useCallback((e: GestureResponderEvent) => {
-    if (!isDrawing || !e.nativeEvent) {
+    if (!isDrawingRef.current || !e.nativeEvent) {
       return;
     }
     
@@ -115,56 +120,62 @@ export default function useStrokeCanvas(expectedStroke: string, options: StrokeC
     
     // 添加新点
     setPoints(prev => {
+      let newPoints: StrokePoint[];
       if (prev.length === 0) {
-        return [{x: locationX, y: locationY, time: now}];
-      }
+        newPoints = [{x: locationX, y: locationY, time: now}];
+      } else {
+        // 获取上一个点
+        const lastPoint = prev[prev.length - 1];
       
-      // 获取上一个点
-      const lastPoint = prev[prev.length - 1];
+        // 计算与上一点的距离
+        const distance = Math.sqrt(
+          Math.pow(locationX - lastPoint.x, 2) +
+          Math.pow(locationY - lastPoint.y, 2)
+        );
       
-      // 计算与上一点的距离
-      const distance = Math.sqrt(
-        Math.pow(locationX - lastPoint.x, 2) +
-        Math.pow(locationY - lastPoint.y, 2)
-      );
-      
-      // 如果距离异常大，可能是坐标计算问题或真正的跳跃
-      if (distance > 30 && prev.length > 1) {
-        // 创建平滑点
-        const steps = Math.min(Math.ceil(distance / 10), 20); // 最多插入20个点，防止过多
-        const interpolatedPoints = [];
+        // 如果距离异常大，可能是坐标计算问题或真正的跳跃
+        if (distance > 30 && prev.length > 1) {
+          // 创建平滑点
+          const steps = Math.min(Math.ceil(distance / 10), 20); // 最多插入20个点，防止过多
+          const interpolatedPoints = [];
         
-        for (let i = 1; i <= steps; i++) {
-          const ratio = i / steps;
-          interpolatedPoints.push({
-            x: lastPoint.x + (locationX - lastPoint.x) * ratio,
-            y: lastPoint.y + (locationY - lastPoint.y) * ratio,
-            time: now - (steps - i),
-          });
+          for (let i = 1; i <= steps; i++) {
+            const ratio = i / steps;
+            interpolatedPoints.push({
+              x: lastPoint.x + (locationX - lastPoint.x) * ratio,
+              y: lastPoint.y + (locationY - lastPoint.y) * ratio,
+              time: now - (steps - i),
+            });
+          }
+        
+          newPoints = [...prev, ...interpolatedPoints];
+        } else {
+          // 添加新点
+          newPoints = [...prev, {x: locationX, y: locationY, time: now}];
         }
-        
-        return [...prev, ...interpolatedPoints];
       }
-      
-      // 添加新点
-      return [...prev, {x: locationX, y: locationY, time: now}];
+      pointsRef.current = newPoints;
+      return newPoints;
     });
-  }, [isDrawing, triggerHapticFeedback]);
+  }, [triggerHapticFeedback]);
   
   // 触摸结束
   const handleTouchEnd = useCallback(() => {
-    console.log('=== handleTouchEnd called ===, isDrawing:', isDrawing, 'points.length:', points.length);
-    if (!isDrawing) {
+    const currentIsDrawing = isDrawingRef.current;
+    const currentPoints = pointsRef.current;
+    console.log('=== handleTouchEnd called ===, isDrawing:', currentIsDrawing, 'points.length:', currentPoints.length);
+    if (!currentIsDrawing) {
       return;
     }
     
     setIsDrawing(false);
+    isDrawingRef.current = false;
     
     // 只有当有足够的点时才判断笔画
-    if (points.length >= minPointsRequired) {
+    if (currentPoints.length >= minPointsRequired) {
       // 判断笔画
-      console.log('Checking stroke with', points.length, 'points for:', expectedStroke);
-      const result = checkStroke(points, expectedStroke);
+      console.log('Checking stroke with', currentPoints.length, 'points for:', expectedStroke);
+      const result = checkStroke(currentPoints, expectedStroke);
       console.log('Stroke check result:', result);
       setFeedback(result.feedback);
       
@@ -175,14 +186,14 @@ export default function useStrokeCanvas(expectedStroke: string, options: StrokeC
       onFeedback?.(result.feedback, result.correct);
       onStrokeEnd?.(result.correct);
     } else {
-      console.log('Stroke too short, points:', points.length, 'required:', minPointsRequired);
+      console.log('Stroke too short, points:', currentPoints.length, 'required:', minPointsRequired);
       const shortFeedback = '笔画太短了，请重试';
       setFeedback(shortFeedback);
       triggerHapticFeedback('incorrect');
       onFeedback?.(shortFeedback, false);
       onStrokeEnd?.(false);
     }
-  }, [isDrawing, points, expectedStroke, minPointsRequired, onFeedback, onStrokeEnd, triggerHapticFeedback]);
+  }, [expectedStroke, minPointsRequired, onFeedback, onStrokeEnd, triggerHapticFeedback]);
   
   // 使用useMemo优化路径计算
   const pathData = useMemo(() => {
